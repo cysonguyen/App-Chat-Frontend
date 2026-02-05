@@ -2,15 +2,32 @@
 
 import { cn } from "../../lib/utils"
 import { ScrollArea, Button, Input, Avatar, AvatarImage, AvatarFallback } from "../ui"
-import { Search, MessageSquarePlus } from "lucide-react"
+import { Search, Users } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
+import { getListConversationsApi } from "../../api/conversation.api"
+import { useAuth } from "../../contexts/AuthContext"
+import { useMemo, useState } from "react"
 
-export function ListConversation({ conversations, selectedConversation, onSelectConversation }) {
+export function ListConversation({ selectedConversationId, onSelectConversation, onSwitchTab }) {
+    const { user } = useAuth()
+    const { data: listConversations = [] } = useQuery({
+        queryKey: ["conversations"],
+        queryFn: () => getListConversationsApi(user.id).then((res) => res || []),
+        enabled: !!user?.id,
+    })
+
+    const [search, setSearch] = useState("")
+
+    const filteredConversations = useMemo(() => {
+        return listConversations.filter((conversation) => conversation.name.toLowerCase().includes(search.toLowerCase()))
+    }, [listConversations, search])
+
     return (
-        <div className="flex h-full w-72 flex-col border-r border-border bg-muted/30">
+        <div className="h-auto w-72 flex-col border-r border-border bg-muted/30 flex min-h-[calc(100vh-64px)]">
             <div className="flex items-center justify-between border-b border-border p-4">
                 <h2 className="text-lg font-semibold">Messages</h2>
-                <Button variant="ghost" size="icon-sm">
-                    <MessageSquarePlus className="size-5" />
+                <Button variant="ghost" size="icon-sm" onClick={onSwitchTab}>
+                    <Users className="size-5" />
                 </Button>
             </div>
 
@@ -20,20 +37,22 @@ export function ListConversation({ conversations, selectedConversation, onSelect
                     <Input
                         placeholder="Search conversations..."
                         className="pl-9"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
             </div>
 
             <ScrollArea className="flex-1">
                 <div className="flex flex-col gap-1 p-2">
-                    {conversations.map((conversation) => (
+                    {filteredConversations.map((conversation) => (
                         <button
                             key={conversation.id}
                             className={cn(
                                 "flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-accent",
-                                selectedConversation === conversation.id && "bg-accent"
+                                selectedConversationId == conversation.id && "bg-accent"
                             )}
-                            onClick={() => onSelectConversation(conversation)}
+                            onClick={() => onSelectConversation(conversation.id)}
                         >
                             <div className="relative">
                                 <Avatar className="size-10">

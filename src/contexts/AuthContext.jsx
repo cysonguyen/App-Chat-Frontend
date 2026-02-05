@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from "react"
+import { createContext, useCallback, useContext, useMemo, useState } from "react"
 import { readJson, removeJson, writeJson } from "../utils/storage"
 import { loginApi } from "../api/auth.api"
 
@@ -6,31 +6,39 @@ const AuthContext = createContext(null)
 const STORAGE_KEY = "auth_user"
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => readJson(STORAGE_KEY))
+  const [authUser, setAuthUser] = useState(() => readJson(STORAGE_KEY))
   const login = async ({ username, password }) => {
     try {
       const response = await loginApi(username, password)
       writeJson(STORAGE_KEY, response)
-      setUser(response)
+      setAuthUser(response)
     } catch (error) {
       console.error(error)
-      throw error
+      alert("Invalid username or password")
     }
   }
 
   const logout = () => {
-    setUser(null)
+    setAuthUser(null)
     removeJson(STORAGE_KEY)
   }
 
+  const refreshUser = useCallback((user) => {
+    setAuthUser((prev) => ({ ...prev, user: user }))
+    writeJson(STORAGE_KEY, { ...authUser, user: user })
+  }, [authUser])
+
   const value = useMemo(
     () => ({
-      user,
-      isAuthenticated: Boolean(user),
+      token: authUser?.accessToken,
+      socketToken: authUser?.socketToken,
+      user: authUser?.user,
+      isAuthenticated: Boolean(authUser),
+      refreshUser,
       login,
       logout,
     }),
-    [user]
+    [authUser, refreshUser]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

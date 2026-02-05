@@ -1,13 +1,12 @@
-import { useEffect, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useState } from "react"
+import { Link } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 
 import { cn } from "../lib/utils"
 import { Label, Input, Button } from "../components/ui"
 
 export default function LoginPage() {
-  const navigate = useNavigate()
-  const { login, user } = useAuth()
+  const { login } = useAuth()
 
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -20,17 +19,11 @@ export default function LoginPage() {
     }
     try {
       await login({ username, password })
-    } catch (error) {      
+    } catch (error) {
       console.error(error)
       alert("Invalid username or password")
     }
   }
-
-  useEffect(() => {
-    if (user) {
-      navigate("/chat")
-    }
-  }, [user, navigate])
 
   return (
     <div className="relative min-h-screen">

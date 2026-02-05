@@ -1,67 +1,82 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 import { useAuth } from "./AuthContext"
-import { closeSocket, createSocket } from "../services/socket"
+import { createSocket, closeSocket } from "../lib/socket"
 
 const SocketContext = createContext(null)
 
 export function SocketProvider({ children }) {
-  const { user } = useAuth()
+  const { user, socketToken } = useAuth()
+
   const [socket, setSocket] = useState(null)
-  const socketRef = useRef(null)
+  const [connected, setConnected] = useState(false)
 
   useEffect(() => {
-    if (!user) {
-      if (socketRef.current) {
-        closeSocket(socketRef.current)
-        socketRef.current = null
+    // logout hoặc chưa login
+    if (!user || !socketToken) {
+      if (socket) {
+        closeSocket(socket)
       }
+      setSocket(null)
+      setConnected(false)
       return
     }
 
     const url = import.meta.env.VITE_SOCKET_URL
     if (!url) {
+      console.error("❌ VITE_SOCKET_URL not found")
       return
     }
 
-    const nextSocket = createSocket(url)
-    socketRef.current = nextSocket
-    if (nextSocket) {
-      nextSocket.addEventListener("open", () => {
-        setSocket(nextSocket)
-      })
-      nextSocket.addEventListener("close", () => {
-        setSocket(null)
-      })
-    }
+    const s = createSocket(url, socketToken)
+
+    s.on("connect", () => {
+      setConnected(true)
+    })
+
+    s.on("disconnect", () => {
+      setConnected(false)
+    })
+
+    s.on("connect_error", (err) => {
+      console.error("❌ Socket connect error:", err.message)
+    })
+
+    setSocket(s)
 
     return () => {
-      closeSocket(nextSocket)
-      if (socketRef.current === nextSocket) {
-        socketRef.current = null
-      }
+      closeSocket(s)
+      setSocket(null)
+      setConnected(false)
     }
-  }, [user])
+  }, [user, socketToken])
 
-  const value = useMemo(() => {
-    const hasWebSocket = typeof WebSocket !== "undefined"
-    return {
+  const value = useMemo(
+    () => ({
       socket,
-      connected: Boolean(
-        socket && hasWebSocket && socket.readyState === WebSocket.OPEN
-      ),
-    }
-  }, [socket])
+      connected,
+    }),
+    [socket, connected]
+  )
 
   return (
-    <SocketContext.Provider value={value}>{children}</SocketContext.Provider>
+    <SocketContext.Provider value={value}>
+      {children}
+    </SocketContext.Provider>
   )
 }
 
+
 // eslint-disable-next-line react-refresh/only-export-components
 export function useSocket() {
-  const context = useContext(SocketContext)
-  if (!context) {
+  const ctx = useContext(SocketContext)
+  if (!ctx) {
     throw new Error("useSocket must be used within SocketProvider")
   }
-  return context
+  return ctx
 }
