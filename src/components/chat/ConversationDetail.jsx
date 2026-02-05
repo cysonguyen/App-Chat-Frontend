@@ -18,8 +18,22 @@ export function ConversationDetail({ conversationId, onClose }) {
         enabled: !!conversationId,
     })
 
+    const formattedConversation = useMemo(() => {
+        const userLength = conversation?.conversationUsers?.length
+        if (userLength === 2) {
+            const newName = conversation?.conversationUsers?.find((conversationUser) => conversationUser.user?.id !== currentUserId)?.user?.fullName
+            return {
+                ...conversation,
+                name: newName ?? conversation.name,
+            }
+        }
+        return conversation
+    }, [conversation, currentUserId])
+
+    console.log('formattedConversation', formattedConversation)
+
     const [isEditing, setIsEditing] = useState(false)
-    const [editedName, setEditedName] = useState(conversation?.name)
+    const [editedName, setEditedName] = useState(formattedConversation?.name)
 
     const handleOpenChange = (open) => {
         setIsOpen(open)
@@ -30,7 +44,7 @@ export function ConversationDetail({ conversationId, onClose }) {
             const payload = {
                 id: conversationId,
                 name: editedName,
-                userIds: conversation.conversationUsers.map((conversationUser) => conversationUser.user.id),
+                userIds: formattedConversation.conversationUsers.map((conversationUser) => conversationUser.user.id),
             }
             const response = await saveConversationApi(payload)
             if (!response.errors) {
@@ -43,16 +57,16 @@ export function ConversationDetail({ conversationId, onClose }) {
         setIsEditing(false)
     }
 
-    const isOnline = useMemo(() => {
-        const conversationUsers = conversation?.conversationUsers || []
+    const isOnline = useMemo(() => {    
+        const conversationUsers = formattedConversation?.conversationUsers || []
         return conversationUsers.filter((conversationUser) => conversationUser.user?.id !== currentUserId)
             .some((conversationUser) => conversationUser.user?.isOnline)
-    }, [conversation, currentUserId])
+    }, [formattedConversation, currentUserId])
 
 
     const handleDeleteConversation = async () => {
         try {
-            const response = await deleteConversationApi(conversation.id)
+            const response = await deleteConversationApi(formattedConversation.id)
             if (!response.errors) {
                 queryClient.invalidateQueries({ queryKey: ["conversations"] })
                 onClose()
@@ -76,8 +90,8 @@ export function ConversationDetail({ conversationId, onClose }) {
                 <div className="flex flex-col items-center text-center">
                     <div className="relative">
                         <Avatar className="size-20">
-                            <AvatarImage src={conversation?.avatar || "/placeholder.svg"} alt={conversation?.name} />
-                            <AvatarFallback className="text-xl">{conversation?.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            <AvatarImage src={formattedConversation?.avatar || "/placeholder.svg"} alt={formattedConversation?.name} />
+                            <AvatarFallback className="text-xl">{formattedConversation?.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         {isOnline && (
                             <span className="absolute bottom-1 right-1 size-4 rounded-full border-2 border-background bg-green-500" />
@@ -88,7 +102,7 @@ export function ConversationDetail({ conversationId, onClose }) {
                             isEditing ? (
                                 <Input type="text" className="w-full" value={editedName} onChange={(e) => setEditedName(e.target.value)} />
                             ) : (
-                                <h3 className="text-lg font-semibold">{conversation?.name}</h3>
+                                <h3 className="text-lg font-semibold">{formattedConversation?.name}</h3>
                             )
                         }
                         {
@@ -105,7 +119,7 @@ export function ConversationDetail({ conversationId, onClose }) {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                    <AddMemberModal conversation={conversation} isOpen={isOpen} onOpenChange={handleOpenChange} />
+                    <AddMemberModal conversation={formattedConversation} isOpen={isOpen} onOpenChange={handleOpenChange} />
                     <Button variant="ghost" className="justify-start text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer" onClick={handleDeleteConversation}>
                         <Trash2 className="mr-2 size-4" />
                         Delete conversation

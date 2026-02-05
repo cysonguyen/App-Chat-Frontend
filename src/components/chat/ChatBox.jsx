@@ -31,6 +31,18 @@ export function ChatBox({
         enabled: !!conversationId,
     })
 
+    const formattedConversation = useMemo(() => {
+        const userLength = conversation?.conversationUsers?.length
+        if (userLength === 2) {
+            const newName = conversation?.conversationUsers?.find((conversationUser) => conversationUser.user?.id !== currentUserId)?.user?.fullName
+            return {
+                ...conversation,
+                name: newName ?? conversation.name,
+            }
+        }
+        return conversation
+    }, [conversation, currentUserId])
+
     const { data: messages, isLoading: isLoadingMessages } = useQuery({
         queryKey: ["messages", conversationId],
         queryFn: async () => {
@@ -64,10 +76,10 @@ export function ChatBox({
     }
 
     const isOnline = useMemo(() => {
-        const conversationUsers = conversation?.conversationUsers || []
+        const conversationUsers = formattedConversation?.conversationUsers || []
         return conversationUsers.filter((conversationUser) => conversationUser.user?.id !== currentUserId)
             .some((conversationUser) => conversationUser.user?.isOnline)
-    }, [conversation?.conversationUsers, currentUserId])
+    }, [formattedConversation?.conversationUsers, currentUserId])
 
     useEffect(() => {
         if (!isLoadingConversation && !isLoadingMessages) {
@@ -87,7 +99,7 @@ export function ChatBox({
         }
     }, [messages])
 
-    if (!conversation) {
+    if (!formattedConversation) {
         return (
             <div className="flex flex-1 items-center justify-center bg-muted/10 min-h-[calc(100vh-64px)]">
                 <div className="text-center">
@@ -109,10 +121,10 @@ export function ChatBox({
             <div className="flex items-center justify-between border-b px-4 py-3">
                 <div className="flex items-center gap-3">
                     <div className="relative">
-                        <Avatar className="size-10">
-                            <AvatarImage src={conversation.avatar} />
+                        <Avatar className="size-10">    
+                            <AvatarImage src={formattedConversation.avatar} />
                             <AvatarFallback>
-                                {conversation.name.slice(0, 2).toUpperCase()}
+                                {formattedConversation.name.slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                         </Avatar>
                         {isOnline && (
@@ -120,7 +132,7 @@ export function ChatBox({
                         )}
                     </div>
                     <div>
-                        <h3 className="font-semibold">{conversation.name}</h3>
+                        <h3 className="font-semibold">{formattedConversation.name}</h3>
                         <p className="text-xs text-muted-foreground">
                             {isOnline ? "Online" : "Offline"}
                         </p>

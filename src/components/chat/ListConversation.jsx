@@ -19,8 +19,20 @@ export function ListConversation({ selectedConversationId, onSelectConversation,
     const [search, setSearch] = useState("")
 
     const filteredConversations = useMemo(() => {
-        return listConversations.filter((conversation) => conversation.name.toLowerCase().includes(search.toLowerCase()))
-    }, [listConversations, search])
+        if (!listConversations) return []
+        const formattedConversations = listConversations.map((conversation) => {
+            const userLength = conversation.conversationUsers.length;
+            if (userLength === 2) {
+                const newName = conversation.conversationUsers.find((conversationUser) => conversationUser.user?.id !== user?.id)?.user?.fullName
+                return {
+                    ...conversation,
+                    name: newName || conversation.name,
+                }
+            }
+            return conversation
+        })
+        return formattedConversations.filter((conversation) => conversation.name.toLowerCase().includes(search.toLowerCase()))
+    }, [listConversations, search, user])
 
     return (
         <div className="h-auto w-72 flex-col border-r border-border bg-muted/30 flex min-h-[calc(100vh-64px)]">

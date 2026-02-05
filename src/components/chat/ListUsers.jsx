@@ -29,7 +29,7 @@ export function ListUsers({ onChangeConversationId, onSwitchTab }) {
 
     const onSaveConversation = (targetUser) => {
         const payload = {
-            name: targetUser.fullName,
+            name: `${targetUser.fullName}, ${user.fullName}`,
             userIds: [targetUser.id, currentUserId]
         }
         return saveConversationApi(payload)
